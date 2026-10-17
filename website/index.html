@@ -85,7 +85,7 @@
     <section class="steps" aria-label="How it works">
       <article class="step"><div class="number">01 / FETCH</div><h2>Read the PR</h2><p>Pull public metadata and changed-file patches through GitHub’s read-only API.</p></article>
       <article class="step"><div class="number">02 / MEASURE</div><h2>Extract signals</h2><p>Count changes, detect tests and CI edits, check contributor history, and validate issue links.</p></article>
-      <article class="step"><div class="number">03 / EXPLAIN</div><h2>Show the call</h2><p>Gemini returns a structured verdict. Hard policy checks keep uncertain cases in maintainer review.</p></article>
+      <article class="step"><div class="number">03 / EXPLAIN</div><h2>Show the call</h2><p>An OpenRouter model returns a structured verdict. Hard policy checks keep uncertain cases in maintainer review.</p></article>
     </section>
 
     <section aria-labelledby="sample-title">
@@ -100,7 +100,7 @@
     </section>
 
     <section class="bottom" aria-label="Privacy and demo commands">
-      <article class="privacy"><p class="section-title">Data boundary</p><h2>Nothing gets posted.</h2><p>The CLI sends GitHub GET requests only. Comment drafts stay in the terminal. Gemini receives a minimal evidence packet only after a one-time notice and acknowledgment.</p></article>
+      <article class="privacy"><p class="section-title">Data boundary</p><h2>Nothing gets posted.</h2><p>The app sends GitHub GET requests only. Comment drafts stay local. OpenRouter and the selected model provider receive a minimal evidence packet after consent.</p></article>
       <article class="step"><p class="section-title">Live demo</p><h2>Try one PR</h2><p>Install the package, add API keys, and classify a public pull request.</p><pre>pr-triage triage owner/repo --pr 123</pre></article>
     </section>
   </main>

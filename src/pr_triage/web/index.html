@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111c19">
+  <title>PR Triage · Local console</title>
+  <style>
+    :root{color-scheme:dark;--bg:#111c19;--panel:#192723;--panel2:#202f2a;--line:#34463f;--ink:#edf2e9;--muted:#aab8af;--lime:#d8f28b;--mint:#9fd0b8;--amber:#f0cb7b;--red:#e79a84;font:15px/1.5 Inter,ui-sans-serif,system-ui,"Segoe UI",sans-serif}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 14% 0%,#1d3930 0,transparent 38%),var(--bg);color:var(--ink)}main{width:min(900px,calc(100% - 32px));margin:48px auto 80px}.eyebrow{color:var(--lime);font:700 11px ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase}h1{font-size:clamp(38px,7vw,64px);line-height:.98;letter-spacing:-.065em;margin:12px 0}header p{color:var(--muted);max-width:640px;margin:14px 0 30px}.panel{background:color-mix(in srgb,var(--panel) 94%,transparent);border:1px solid var(--line);border-radius:18px;padding:24px;margin:18px 0;box-shadow:0 18px 50px #07100d44}.section-head{display:flex;align-items:baseline;gap:12px;margin-bottom:16px}.step{color:var(--lime);font:700 11px ui-monospace,monospace}.section-head h2{font-size:17px;margin:0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.field{display:flex;flex-direction:column;gap:7px}.field.full{grid-column:1/-1}label{font-size:12px;color:#d5dfd7;font-weight:650}input,select{width:100%;border:1px solid #40554b;border-radius:10px;background:#101a17;color:var(--ink);padding:12px 13px;font:inherit;outline:none}input:focus,select:focus{border-color:var(--mint);box-shadow:0 0 0 3px #9fd0b822}input::placeholder{color:#728179}.hint{color:var(--muted);font-size:12px;margin:4px 0 0}.inline{display:flex;gap:9px;align-items:center}.inline input{flex:1}.button{border:1px solid var(--line);border-radius:10px;background:var(--panel2);color:var(--ink);font:700 13px system-ui,sans-serif;padding:12px 15px;cursor:pointer;white-space:nowrap}.button:hover{border-color:var(--mint)}.button.primary{background:var(--lime);border-color:var(--lime);color:#17221b;padding:13px 19px}.button:disabled{opacity:.55;cursor:wait}.consent{display:flex;align-items:flex-start;gap:10px;color:var(--muted);font-size:13px;margin:17px 0}.consent input{width:17px;height:17px;margin:1px 0 0;accent-color:var(--lime);flex:none}.privacy-note{padding:12px 14px;border-left:3px solid var(--amber);background:#f0cb7b0c;color:#d9d5c6;font-size:12px;border-radius:0 8px 8px 0}.actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap}.status{color:var(--muted);font-size:13px}.status.error{color:var(--red)}.status.ok{color:var(--mint)}.results{display:grid;gap:12px}.result{border:1px solid var(--line);border-radius:12px;padding:18px;background:#111b18}.result-top{display:flex;gap:12px;align-items:center;justify-content:space-between}.verdict{font:700 11px ui-monospace,monospace;text-transform:uppercase;letter-spacing:.07em;color:var(--lime)}.verdict.minor{color:var(--mint)}.verdict.needs-review{color:var(--amber)}.verdict.suspected-spam{color:var(--red)}.confidence{color:var(--muted);font:12px ui-monospace,monospace}.result h3{font-size:16px;margin:12px 0 5px}.result p{color:var(--muted);margin:6px 0;font-size:13px}.result strong{color:var(--ink)}.empty{color:var(--muted);text-align:center;padding:24px}.hidden{display:none!important}footer{color:#85958b;font-size:11px;text-align:center;margin-top:22px}a{color:var(--mint)}
+    @media(max-width:620px){main{margin-top:30px}.panel{padding:18px}.grid{grid-template-columns:1fr}.field.full{grid-column:auto}.inline{align-items:stretch}.inline .button{padding-inline:10px}}
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div class="eyebrow">PR Triage · local console</div>
+      <h1>Review with receipts.</h1>
+      <p>Fetch one GitHub pull request, measure its signals, and get a cautious recommendation. This app only reads GitHub. It never posts comments or changes labels.</p>
+    </header>
+
+    <form id="triage-form">
+      <section class="panel" aria-labelledby="connection-title">
+        <div class="section-head"><span class="step">01</span><h2 id="connection-title">Connect OpenRouter</h2></div>
+        <div class="grid">
+          <div class="field full">
+            <label for="api-key">OpenRouter API key</label>
+            <div class="inline"><input id="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="sk-or-v1-…" required><button id="clear-key" class="button" type="button">Clear</button></div>
+            <p class="hint">Key stays in this tab and request memory. The app does not save it. Use a restricted, low-budget key.</p>
+          </div>
+          <div class="field full">
+            <label for="model-search">Find a model</label>
+            <div class="inline"><input id="model-search" type="search" placeholder="Search after loading model list"><button id="load-models" class="button" type="button">Load models</button></div>
+            <select id="model" size="5" aria-label="OpenRouter model" required><option value="">Load models with your API key</option></select>
+            <p class="hint">List includes text models that advertise structured-output support. Choose an open-weight model if your event requires one; check event eligibility.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="pr-title">
+        <div class="section-head"><span class="step">02</span><h2 id="pr-title">Choose a pull request</h2></div>
+        <div class="grid">
+          <div class="field"><label for="repo">GitHub repository</label><input id="repo" value="firstcontributions/first-contributions" placeholder="owner/repo" required></div>
+          <div class="field"><label for="pr-number">Pull request number</label><input id="pr-number" type="number" min="1" step="1" placeholder="123" required></div>
+          <div class="field full"><label for="github-token">GitHub token <span class="hint">(optional; raises API rate limit)</span></label><input id="github-token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…"></div>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="privacy-title">
+        <div class="section-head"><span class="step">03</span><h2 id="privacy-title">Review data sharing</h2></div>
+        <div class="privacy-note">PR title, body, author, repository name, and computed signals go to OpenRouter and the selected model provider. Providers have different retention and training policies. Raw patches, GitHub tokens, and full issue bodies stay out of the model request. <a href="https://openrouter.ai/privacy/" target="_blank" rel="noreferrer">OpenRouter privacy</a>.</div>
+        <label class="consent"><input id="consent" type="checkbox" required><span>I reviewed this notice and agree to send PR metadata to OpenRouter and the selected model provider.</span></label>
+        <div class="actions"><button id="submit" class="button primary" type="submit">Triage pull request</button><span id="status" class="status" role="status" aria-live="polite"></span></div>
+      </section>
+    </form>
+
+    <section id="results-section" class="panel hidden" aria-labelledby="results-title">
+      <div class="section-head"><span class="step">04</span><h2 id="results-title">Triage results</h2></div>
+      <div id="results" class="results"></div>
+    </section>
+    <footer>Runs on this computer at 127.0.0.1 · OpenRouter key is never written to disk</footer>
+  </main>
+  <script src="/app.js" defer></script>
+</body>
+</html>

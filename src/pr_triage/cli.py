@@ -109,8 +109,8 @@ def _run(
 ) -> None:
     _validate_repo(repo)
     token = os.getenv("GITHUB_TOKEN") or None
-    api_key = os.getenv("GEMINI_API_KEY") or None
-    model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+    api_key = os.getenv("OPENROUTER_API_KEY") or None
+    model = os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.3-70b-instruct")
     if pr is not None:
         if pr < 1:
             raise typer.BadParameter("PR number must be positive.")
@@ -136,7 +136,7 @@ def triage(
         bool,
         typer.Option(
             "--accept-data-sharing",
-            help="Acknowledge the one-time Google Gemini metadata notice.",
+            help="Acknowledge the one-time OpenRouter metadata notice.",
         ),
     ] = False,
 ) -> None:
@@ -177,6 +177,20 @@ def demo(
     except GitHubAPIError as exc:
         console.print(f"[red]{exc}[/red]", stderr=True)
         raise typer.Exit(code=1) from exc
+
+
+@app.command()
+def web(
+    host: Annotated[str, typer.Option(help="Bind address; loopback only.")] = "127.0.0.1",
+    port: Annotated[int, typer.Option(min=1, max=65535)] = 8000,
+) -> None:
+    """Start the local browser interface."""
+    from pr_triage.webapp import serve
+
+    try:
+        serve(host=host, port=port)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
 
 
 if __name__ == "__main__":
