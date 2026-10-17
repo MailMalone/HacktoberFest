@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f3ee">
+  <title>PR Triage — First pass, with receipts</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #172421;
+      --muted: #53635e;
+      --paper: #f5f3ee;
+      --card: #fffefa;
+      --line: #d9ded5;
+      --green: #215d48;
+      --lime: #d9ed9b;
+      --amber: #f2ce77;
+      --red: #d77963;
+      --blue: #8ab3a2;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--paper); color: var(--ink); }
+    a { color: inherit; }
+    .wrap { width: min(1120px, calc(100% - 40px)); margin: 0 auto; }
+    header { padding: 24px 0; border-bottom: 1px solid var(--line); }
+    .nav { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+    .brand { font-weight: 800; letter-spacing: -.04em; font-size: 20px; }
+    .tag { color: var(--green); font: 700 12px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; text-transform: uppercase; letter-spacing: .1em; }
+    main { padding: 70px 0 48px; }
+    .hero { display: grid; grid-template-columns: 1.2fr .8fr; gap: 48px; align-items: center; }
+    h1 { max-width: 680px; font-size: clamp(44px, 7vw, 82px); line-height: .98; letter-spacing: -.07em; margin: 16px 0 22px; }
+    .lead { max-width: 620px; color: var(--muted); font-size: 19px; line-height: 1.55; }
+    .prompt { background: var(--ink); color: #f7f7ee; padding: 24px; border-radius: 18px; box-shadow: 12px 12px 0 var(--lime); }
+    .prompt small { color: #a7c5b7; font: 700 11px/1.4 ui-monospace, monospace; text-transform: uppercase; letter-spacing: .12em; }
+    .prompt p { font: 15px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace; margin: 16px 0 0; }
+    .prompt strong { color: var(--lime); }
+    .section-title { margin: 0 0 18px; font-size: 13px; text-transform: uppercase; letter-spacing: .12em; color: var(--green); }
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 66px 0; }
+    .step, .verdict, .privacy { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 22px; }
+    .number { color: var(--green); font: 700 12px ui-monospace, monospace; }
+    h2 { font-size: 22px; letter-spacing: -.04em; margin: 12px 0 8px; }
+    .step p, .verdict p, .privacy p { color: var(--muted); line-height: 1.5; margin: 0; }
+    .results { border: 1px solid var(--line); background: var(--card); border-radius: 16px; overflow: hidden; }
+    .result-head, .result-row { display: grid; grid-template-columns: 150px 1fr 1.3fr; gap: 18px; padding: 17px 20px; align-items: start; }
+    .result-head { background: #e9eee4; font: 700 11px ui-monospace, monospace; text-transform: uppercase; letter-spacing: .08em; }
+    .result-row { border-top: 1px solid var(--line); font-size: 14px; line-height: 1.45; }
+    .pill { display: inline-block; padding: 4px 8px; border-radius: 999px; font: 700 11px ui-monospace, monospace; }
+    .substantive { background: var(--lime); color: #23472e; }
+    .minor { background: #dce9e3; color: #245743; }
+    .review { background: var(--amber); color: #593e0b; }
+    .spam { background: #f2d9d2; color: #733b2e; }
+    .bottom { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 48px; }
+    .privacy { background: #e9eee4; }
+    pre { overflow-x: auto; margin: 14px 0 0; padding: 14px; border-radius: 10px; background: var(--ink); color: #f4f4eb; font: 13px/1.55 ui-monospace, monospace; }
+    footer { border-top: 1px solid var(--line); color: var(--muted); padding: 22px 0 34px; font-size: 13px; }
+    @media (max-width: 760px) {
+      main { padding-top: 46px; }
+      .hero, .bottom { grid-template-columns: 1fr; }
+      .steps { grid-template-columns: 1fr; margin: 48px 0; }
+      .result-head, .result-row { grid-template-columns: 105px 1fr; }
+      .result-head span:last-child, .result-row span:last-child { grid-column: 1 / -1; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap nav"><div class="brand">PR Triage</div><div class="tag">Local · Read-only · Evidence first</div></div>
+  </header>
+  <main class="wrap">
+    <section class="hero" aria-labelledby="title">
+      <div>
+        <div class="tag">A calmer Hacktoberfest inbox</div>
+        <h1 id="title">First pass, with receipts.</h1>
+        <p class="lead">PR Triage helps maintainers sort genuine contributions from small fixes, uncertain cases, and suspicious patterns. Every recommendation points back to concrete signals.</p>
+      </div>
+      <aside class="prompt" aria-label="Example maintainer question">
+        <small>Maintainer asks</small>
+        <p>“Is this a real contribution, and what should I check next?”</p>
+        <p><strong>PR Triage answers locally</strong> with diff, tests, contributor history, linked issues, and a clear confidence score.</p>
+      </aside>
+    </section>
+
+    <section class="steps" aria-label="How it works">
+      <article class="step"><div class="number">01 / FETCH</div><h2>Read the PR</h2><p>Pull public metadata and changed-file patches through GitHub’s read-only API.</p></article>
+      <article class="step"><div class="number">02 / MEASURE</div><h2>Extract signals</h2><p>Count changes, detect tests and CI edits, check contributor history, and validate issue links.</p></article>
+      <article class="step"><div class="number">03 / EXPLAIN</div><h2>Show the call</h2><p>Gemini returns a structured verdict. Hard policy checks keep uncertain cases in maintainer review.</p></article>
+    </section>
+
+    <section aria-labelledby="sample-title">
+      <p class="section-title" id="sample-title">One output · four outcomes</p>
+      <div class="results" role="table" aria-label="Example triage outcomes">
+        <div class="result-head" role="row"><span role="columnheader">Verdict</span><span role="columnheader">What it means</span><span role="columnheader">What the maintainer sees</span></div>
+        <div class="result-row" role="row"><span role="cell"><b class="pill substantive">substantive</b></span><span role="cell">Meaningful code or test work</span><span role="cell">Evidence summary and a specific, respectful public comment draft</span></div>
+        <div class="result-row" role="row"><span role="cell"><b class="pill minor">minor</b></span><span role="cell">Small but legitimate improvement</span><span role="cell">Evidence summary and a kind comment draft with a useful next step</span></div>
+        <div class="result-row" role="row"><span role="cell"><b class="pill spam">suspected-spam</b></span><span role="cell">Multiple independent strong indicators</span><span role="cell">Private maintainer note; no public comment draft</span></div>
+        <div class="result-row" role="row"><span role="cell"><b class="pill review">needs-review</b></span><span role="cell">Missing, conflicting, or low-confidence evidence</span><span role="cell">Private uncertainty note; no public comment draft</span></div>
+      </div>
+    </section>
+
+    <section class="bottom" aria-label="Privacy and demo commands">
+      <article class="privacy"><p class="section-title">Data boundary</p><h2>Nothing gets posted.</h2><p>The CLI sends GitHub GET requests only. Comment drafts stay in the terminal. Gemini receives a minimal evidence packet only after a one-time notice and acknowledgment.</p></article>
+      <article class="step"><p class="section-title">Live demo</p><h2>Try one PR</h2><p>Install the package, add API keys, and classify a public pull request.</p><pre>pr-triage triage owner/repo --pr 123</pre></article>
+    </section>
+  </main>
+  <footer><div class="wrap">PR Triage · MIT licensed · Built for respectful, evidence-based open-source review</div></footer>
+</body>
+</html>
