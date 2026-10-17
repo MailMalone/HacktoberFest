@@ -1,9 +1,8 @@
-"""Call Gemini for a structured decision, then apply deterministic safety policy."""
+"""Call OpenRouter for a structured decision, then apply safety policy."""
 
 import re
 
-from google import genai
-from google.genai import types
+import httpx
 
 from pr_triage.classifier.prompts import SYSTEM_PROMPT, contains_prompt_injection
 from pr_triage.models import ClassificationDecision, EvidencePacket, Verdict
@@ -30,7 +29,7 @@ ALLOWED_SIGNALS = {
 
 
 class ClassificationError(RuntimeError):
-    """Raised when Gemini cannot provide a valid structured decision."""
+    """Raised when OpenRouter cannot provide a valid structured decision."""
 
 
 def _bounded_reasoning(text: str) -> str:
@@ -162,13 +161,37 @@ def apply_safety_policy(
     return decision
 
 
-class GeminiClassifier:
-    """Use Gemini structured output to classify a minimal evidence packet."""
+def classification_schema() -> dict[str, object]:
+    """Return portable strict JSON Schema for OpenRouter structured outputs."""
+    return {
+        "name": "pr_triage_decision",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "verdict": {
+                    "type": "string",
+                    "enum": [verdict.value for verdict in Verdict],
+                },
+                "confidence": {"type": "number"},
+                "reasoning": {"type": "string"},
+                "signals_cited": {"type": "array", "items": {"type": "string"}},
+            },
+            "required": ["verdict", "confidence", "reasoning", "signals_cited"],
+            "additionalProperties": False,
+        },
+    }
 
-    def __init__(self, api_key: str, model: str = "gemini-2.5-flash") -> None:
+
+class OpenRouterClassifier:
+    """Use OpenRouter's OpenAI-compatible API to classify evidence."""
+
+    def __init__(self, api_key: str, model: str) -> None:
         if not api_key:
-            raise ClassificationError("GEMINI_API_KEY is not configured.")
-        self._client = genai.Client(api_key=api_key)
+            raise ClassificationError("OPENROUTER_API_KEY is not configured.")
+        if not model:
+            raise ClassificationError("An OpenRouter model must be selected.")
+        self._api_key = api_key
         self._model = model
 
     async def classify(self, packet: EvidencePacket) -> ClassificationDecision:
@@ -195,26 +218,86 @@ class GeminiClassifier:
             )
 
         try:
-            response = await self._client.aio.models.generate_content(
-                model=self._model,
-                contents=packet.model_dump_json(exclude_none=False),
-                config=types.GenerateContentConfig(
-                    system_instruction=SYSTEM_PROMPT,
-                    response_mime_type="application/json",
-                    response_schema=ClassificationDecision,
-                    temperature=0.1,
-                ),
-            )
-            if not response.text:
-                raise ClassificationError("Gemini returned an empty classification.")
-            decision = ClassificationDecision.model_validate_json(response.text)
+            async with httpx.AsyncClient(timeout=45.0) as client:
+                response = await client.post(
+                    "https://openrouter.ai/api/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {self._api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": self._model,
+                        "messages": [
+                            {"role": "system", "content": SYSTEM_PROMPT},
+                            {
+                                "role": "user",
+                                "content": packet.model_dump_json(exclude_none=False),
+                            },
+                        ],
+                        "temperature": 0.1,
+                        "max_tokens": 500,
+                        "response_format": {
+                            "type": "json_schema",
+                            "json_schema": classification_schema(),
+                        },
+                        "provider": {"require_parameters": True},
+                    },
+                )
+                response.raise_for_status()
+            content = response.json()["choices"][0]["message"]["content"]
+            if not content:
+                raise ClassificationError("OpenRouter returned an empty classification.")
+            decision = ClassificationDecision.model_validate_json(content)
         except ClassificationError:
             raise
+        except httpx.HTTPStatusError as exc:
+            raise ClassificationError(
+                f"OpenRouter rejected the request (HTTP {exc.response.status_code}); "
+                "check the API key, model, and model's structured-output support."
+            ) from exc
+        except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError) as exc:
+            raise ClassificationError(
+                f"OpenRouter classification failed ({type(exc).__name__})."
+            ) from exc
         except Exception as exc:
             raise ClassificationError(
-                f"Gemini classification failed ({type(exc).__name__})."
+                f"OpenRouter classification failed ({type(exc).__name__})."
             ) from exc
         return apply_safety_policy(packet, decision)
+
+
+async def list_openrouter_models(api_key: str) -> list[dict[str, str]]:
+    """List text models advertising structured-output support."""
+    if not api_key:
+        raise ClassificationError("OPENROUTER_API_KEY is required to list models.")
+    try:
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            response = await client.get(
+                "https://openrouter.ai/api/v1/models",
+                headers={"Authorization": f"Bearer {api_key}"},
+                params={
+                    "output_modalities": "text",
+                    "supported_parameters": "structured_outputs",
+                },
+            )
+            response.raise_for_status()
+        models = response.json().get("data", [])
+        return sorted(
+            [
+                {"id": str(item["id"]), "name": str(item.get("name") or item["id"])}
+                for item in models
+                if item.get("id")
+            ],
+            key=lambda item: item["name"].casefold(),
+        )
+    except httpx.HTTPStatusError as exc:
+        raise ClassificationError(
+            f"OpenRouter rejected the model request (HTTP {exc.response.status_code})."
+        ) from exc
+    except (httpx.HTTPError, KeyError, TypeError, ValueError) as exc:
+        raise ClassificationError(
+            f"Could not load OpenRouter models ({type(exc).__name__})."
+        ) from exc
 
 
 def safe_fallback(reason: str) -> ClassificationDecision:

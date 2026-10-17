@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 from pr_triage.classifier.engine import (
     ClassificationError,
-    GeminiClassifier,
+    OpenRouterClassifier,
     evidence_is_incomplete,
     safe_fallback,
 )
@@ -134,7 +134,7 @@ async def triage_pull_request(
     client: GitHubClient,
     repo: str,
     pr: PullRequest,
-    classifier: GeminiClassifier | None,
+    classifier: OpenRouterClassifier | None,
     accept_data_sharing: bool = False,
 ) -> TriageResult:
     """Analyze one PR; never call a GitHub write endpoint."""
@@ -155,7 +155,7 @@ async def triage_pull_request(
         detail = ", ".join(bundle.unavailable) or "required evidence"
         decision = safe_fallback(f"Required evidence is incomplete: {detail}.")
     elif classifier is None:
-        decision = safe_fallback("GEMINI_API_KEY is missing; no AI classification was run.")
+        decision = safe_fallback("OPENROUTER_API_KEY is missing; no AI classification was run.")
     else:
         ensure_data_sharing_acknowledged(accept_data_sharing)
         try:
@@ -176,7 +176,7 @@ async def triage_many(
 ) -> list[TriageResult]:
     """Fetch and classify a selected set of PRs, continuing after individual failures."""
     results: list[TriageResult] = []
-    classifier = GeminiClassifier(api_key=api_key, model=model) if api_key else None
+    classifier = OpenRouterClassifier(api_key=api_key, model=model) if api_key else None
     async with GitHubClient(token=token) as client:
         for number in pr_numbers:
             try:
@@ -203,7 +203,7 @@ async def triage_recent(
     accept_data_sharing: bool = False,
 ) -> list[TriageResult]:
     """List recent open PRs, then classify each independently."""
-    classifier = GeminiClassifier(api_key=api_key, model=model) if api_key else None
+    classifier = OpenRouterClassifier(api_key=api_key, model=model) if api_key else None
     async with GitHubClient(token=token) as client:
         prs = await client.list_open_pull_requests(repo, limit)
         results: list[TriageResult] = []

@@ -1,4 +1,4 @@
-"""One-time local acknowledgment before PR text is sent to Gemini."""
+"""One-time local acknowledgment before PR text is sent to OpenRouter."""
 
 import sys
 from pathlib import Path
@@ -10,15 +10,15 @@ class ConsentError(RuntimeError):
 
 NOTICE = (
     "PR title, up to 2,000 characters of body, author, repository name, and computed "
-    "signals will be sent to Google Gemini for classification. For private repositories, "
-    "this sends repository metadata outside your machine. Tokens, raw diff patches, and "
-    "issue bodies are excluded."
+    "signals will be sent to OpenRouter and the selected model provider for classification. "
+    "Provider data handling varies. For private repositories, this sends repository metadata "
+    "outside your machine. Tokens, raw diff patches, and issue bodies are excluded."
 )
 
 
 def _acknowledgment_path() -> Path:
     """Return the per-user acknowledgment marker location."""
-    return Path.home() / ".pr-triage" / "privacy_ack"
+    return Path.home() / ".pr-triage" / "privacy_ack_openrouter_v1"
 
 
 def ensure_data_sharing_acknowledged(accept_data_sharing: bool = False) -> None:
@@ -35,11 +35,11 @@ def ensure_data_sharing_acknowledged(accept_data_sharing: bool = False) -> None:
             "No interactive input is available. Re-run with --accept-data-sharing after review."
         )
     else:
-        print("Send this PR metadata to Gemini? [y/N] ", end="", file=sys.stderr)
+        print("Send this PR metadata to OpenRouter? [y/N] ", end="", file=sys.stderr)
         accepted = input().strip().lower() in {"y", "yes"}
 
     if not accepted:
-        raise ConsentError("Classification stopped; PR metadata was not sent to Gemini.")
+        raise ConsentError("Classification stopped; PR metadata was not sent to OpenRouter.")
 
     marker.parent.mkdir(parents=True, exist_ok=True)
     marker.write_text("acknowledged\n", encoding="utf-8")

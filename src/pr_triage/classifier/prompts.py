@@ -1,4 +1,4 @@
-"""Security-hardened Gemini system instructions and prompt-injection checks."""
+"""Security-hardened model instructions and prompt-injection checks."""
 
 import re
 
