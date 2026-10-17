@@ -4,6 +4,29 @@ PR Triage is a contribution review console for open-source maintainers. Review p
 
 The web UI can publish a PR message after you edit and explicitly confirm it. Claim Monitor and all CLI commands are read-only.
 
+## How the pieces fit together
+
+```mermaid
+flowchart TD
+    Repo[GitHub repository] --> Fetch[Collect GitHub evidence]
+    Fetch --> Review[Review selected PRs]
+    Fetch --> Radar[Duplicate Radar]
+    Fetch --> Claims[Claim Monitor]
+    Review --> Signals[Compute contribution signals locally]
+    Signals --> AI[OpenRouter model interprets structured evidence]
+    AI --> Verdict[Recommendation with evidence and reasoning]
+    Radar --> Compare[Compare changed lines locally]
+    Compare --> Overlap[Overlapping patches and recorded exceptions]
+    Claims --> Activity[Check assignments and visible activity]
+    Activity --> Inactive[Inactive assigned issues]
+    Verdict --> Human[Maintainer inspects findings]
+    Overlap --> Human
+    Inactive --> Human
+```
+
+Only PR classification calls an AI model. Duplicate comparisons and claim scans use
+local rules applied to GitHub data. Results are available through the web console and CLI.
+
 ## Run it
 
 Requires Python 3.10+. Set an OpenRouter API key in `.env` for web and CLI classification. A GitHub token is optional but recommended.
@@ -74,6 +97,20 @@ This detects repeated lines, not semantically equivalent rewrites. Maintainers c
 a legitimate-backport or other exception; exceptions are tied to the compared patch
 fingerprints, so changed code needs fresh review. Raw patches stay local.
 
+```mermaid
+flowchart LR
+    A[PR A changed lines] --> Valid{Complete patches?}
+    B[PR B changed lines] --> Valid
+    Valid -->|No| Skip[Exclude incomplete evidence]
+    Valid -->|Yes| Match[Compare file paths and signed changed lines]
+    Match --> Score[Calculate overlap]
+    Score -->|At least 70 percent| Evidence[Show shared lines and differences]
+    Evidence --> Decision[Maintainer reviews or records an exception]
+```
+
+An overlapping patch can be an intentional backport. The result is evidence to inspect,
+not an automatic spam classification.
+
 CLI radar output is also available as evidence JSON:
 
 ```powershell
@@ -91,6 +128,20 @@ showing the assignee, inactivity period, last observed activity, and issue link.
 Assignee replies, assignments, and linked PR commits/reviews contribute to the activity check.
 A recent metadata update conservatively counts as activity. Free-text claims alone are not tracked.
 No visible activity does not prove someone stopped working; they may be working offline.
+
+```mermaid
+flowchart TD
+    Issues[Open issues] --> Assigned{Explicitly assigned?}
+    Assigned -->|No| Skip[Outside the claim scan]
+    Assigned -->|Yes| Exempt{Keep-open exemption?}
+    Exempt -->|Yes| Skip
+    Exempt -->|No| Evidence[Read assignee replies, assignment events and linked PR progress]
+    Evidence --> Complete{Complete activity evidence?}
+    Complete -->|No| Error[Report scan error]
+    Complete -->|Yes| Threshold{Inactivity exceeds chosen threshold?}
+    Threshold -->|No| Omit[Omit from inactive results]
+    Threshold -->|Yes| Result[Display issue, assignee, inactivity and source link]
+```
 
 No background claim worker runs. The old run/reset routes reject requests, and previously
 enabled policies cannot trigger warnings, closures, or assignment removals. Manual reviewed
