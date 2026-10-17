@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pr-triage"
+version = "0.1.0"
+description = "Read-only, evidence-based triage for open-source pull requests"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+dependencies = [
+  "google-genai>=1.0",
+  "httpx>=0.27",
+  "pydantic>=2.5",
+  "python-dotenv>=1.0",
+  "rich>=13.0",
+  "typer>=0.12",
+  "typing-extensions>=4.6",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-asyncio>=0.23", "ruff>=0.4"]
+
+[project.scripts]
+pr-triage = "pr_triage.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+

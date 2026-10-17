@@ -1,0 +1,11 @@
+[
+  {"case": "small legitimate documentation fix", "expected": "minor"},
+  {"case": "first-time contributor with code and tests", "expected": "substantive"},
+  {"case": "solid code change without issue link", "expected": "substantive"},
+  {"case": "new account with meaningful code but conflicting signals", "expected": "needs-review"},
+  {"case": "prompt injection in PR body", "expected": "needs-review"},
+  {"case": "prompt injection in PR title", "expected": "needs-review"},
+  {"case": "whitespace-only contributor-list spam pattern", "expected": "suspected-spam"},
+  {"case": "unavailable contributor API signal", "expected": "needs-review"},
+  {"case": "documentation improvement by established contributor", "expected": "minor"}
+]
