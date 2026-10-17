@@ -1,5 +1,20 @@
 # PR Triage — Agent Instructions
 
+## Updated web scope
+
+Claim monitor is now read-only by the user's latest request. Display inactive assigned
+issues only. Do not start background claim automation or expose warning, closure,
+assignment-removal, or retry actions. Existing enabled policies must not trigger writes.
+Duplicate patch radar remains read-only.
+
+The user's subsequent request authorizes an optional web UI action to post a reviewed,
+editable public PR message using GITHUB_TOKEN from .env. This overrides the original
+read-only restriction for that explicit web action only. Classification and the CLI
+remain read-only; private maintainer notes must never be automatically published.
+The token stays server-side. Posting requires the user to review the destination and
+message and explicitly confirm. Authentication raises API allowances; it does not
+eliminate GitHub rate limits.
+
 ## Project Overview
 
 **PR Triage** is a local, read-only CLI tool that helps open-source maintainers triage incoming pull requests — especially during Hacktoberfest. It extracts deterministic signals from each PR, sends a structured evidence packet to a small LLM, and displays a recommendation with reasoning. **It never posts anything to GitHub.**

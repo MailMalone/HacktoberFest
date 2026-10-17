@@ -183,6 +183,13 @@ def classification_schema() -> dict[str, object]:
     }
 
 
+def classification_response_format(model: str) -> dict[str, object]:
+    """Use JSON mode for free Gemma routes, which do not expose JSON Schema."""
+    if model.startswith("google/gemma-") and model.endswith(":free"):
+        return {"type": "json_object"}
+    return {"type": "json_schema", "json_schema": classification_schema()}
+
+
 class OpenRouterClassifier:
     """Use OpenRouter's OpenAI-compatible API to classify evidence."""
 
@@ -236,10 +243,7 @@ class OpenRouterClassifier:
                         ],
                         "temperature": 0.1,
                         "max_tokens": 500,
-                        "response_format": {
-                            "type": "json_schema",
-                            "json_schema": classification_schema(),
-                        },
+                        "response_format": classification_response_format(self._model),
                         "provider": {"require_parameters": True},
                     },
                 )
@@ -251,10 +255,7 @@ class OpenRouterClassifier:
         except ClassificationError:
             raise
         except httpx.HTTPStatusError as exc:
-            raise ClassificationError(
-                f"OpenRouter rejected the request (HTTP {exc.response.status_code}); "
-                "check the API key, model, and model's structured-output support."
-            ) from exc
+            raise ClassificationError(_openrouter_status_message(exc.response)) from exc
         except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError) as exc:
             raise ClassificationError(
                 f"OpenRouter classification failed ({type(exc).__name__})."
@@ -264,6 +265,45 @@ class OpenRouterClassifier:
                 f"OpenRouter classification failed ({type(exc).__name__})."
             ) from exc
         return apply_safety_policy(packet, decision)
+
+
+def _openrouter_status_message(response: httpx.Response) -> str:
+    """Translate OpenRouter HTTP errors into actionable, bounded messages."""
+    status = response.status_code
+    try:
+        payload = response.json()
+    except ValueError:
+        payload = {}
+    error = payload.get("error") if isinstance(payload, dict) else None
+    detail = error.get("message") if isinstance(error, dict) else error
+    metadata = error.get("metadata") if isinstance(error, dict) else None
+    if not isinstance(metadata, dict) and isinstance(payload, dict):
+        metadata = payload.get("metadata")
+    provider = metadata.get("provider_name") if isinstance(metadata, dict) else None
+    provider = " ".join(provider.split()) if isinstance(provider, str) else ""
+    detail = " ".join(str(detail).split()) if isinstance(detail, str) else ""
+    if len(detail) > 240:
+        detail = f"{detail[:237]}..."
+
+    if status == 429:
+        message = "OpenRouter rate limit reached (HTTP 429)."
+        if provider:
+            message += f" Provider: {provider}."
+        if detail:
+            message += f" {detail}"
+        retry_after = response.headers.get("Retry-After", "")
+        if re.fullmatch(r"\d{1,6}", retry_after):
+            message += f" Retry after {retry_after} seconds."
+        else:
+            message += " Wait before retrying; free routes have per-minute and daily limits."
+        return message
+    if status == 401:
+        return "OpenRouter rejected the API key (HTTP 401). Check OPENROUTER_API_KEY."
+    if status == 402:
+        return "OpenRouter requires credits for this request (HTTP 402). Choose a free route or add credits."
+
+    message = f"OpenRouter rejected the request (HTTP {status})."
+    return f"{message} {detail}" if detail else message
 
 
 async def list_openrouter_models(api_key: str) -> list[dict[str, str]]:

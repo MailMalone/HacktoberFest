@@ -1,8 +1,11 @@
 import json
 
+import httpx
+
 from pr_triage.classifier import engine
 from pr_triage.classifier.engine import (
     OpenRouterClassifier,
+    classification_response_format,
     classification_schema,
     list_openrouter_models,
 )
@@ -79,6 +82,35 @@ def test_classification_schema_requires_every_property():
     assert schema["properties"]["verdict"]["enum"] == [item.value for item in Verdict]
 
 
+def test_free_gemma_uses_json_mode_while_other_models_use_json_schema():
+    assert classification_response_format("google/gemma-4-31b-it:free") == {
+        "type": "json_object"
+    }
+    assert classification_response_format("meta-llama/llama-3.3-70b-instruct:free")["type"] == "json_schema"
+
+
+def test_rate_limit_error_shows_provider_detail_and_retry_after():
+    response = httpx.Response(
+        429,
+        json={
+            "error": {
+                "message": "Rate limit exceeded. Please try again later.",
+                "metadata": {"provider_name": "Google AI Studio"},
+            }
+        },
+        headers={"Retry-After": "17"},
+        request=httpx.Request("POST", "https://openrouter.ai/api/v1/chat/completions"),
+    )
+
+    message = engine._openrouter_status_message(response)
+
+    assert message == (
+        "OpenRouter rate limit reached (HTTP 429). Provider: Google AI Studio. "
+        "Rate limit exceeded. "
+        "Please try again later. Retry after 17 seconds."
+    )
+
+
 def test_model_discovery_uses_structured_text_filter(monkeypatch):
     captured = {}
 
@@ -91,6 +123,7 @@ def test_model_discovery_uses_structured_text_filter(monkeypatch):
                 "data": [
                     {"id": "z/model", "name": "Zulu"},
                     {"id": "a/model", "name": "Alpha"},
+                    {"name": "Missing ID"},
                 ]
             }
 
@@ -112,7 +145,10 @@ def test_model_discovery_uses_structured_text_filter(monkeypatch):
     monkeypatch.setattr(engine.httpx, "AsyncClient", Client)
     result = run_immediate(list_openrouter_models("secret-key"))
 
-    assert [model["id"] for model in result] == ["a/model", "z/model"]
+    assert result == [
+        {"id": "a/model", "name": "Alpha"},
+        {"id": "z/model", "name": "Zulu"},
+    ]
     assert captured["params"] == {
         "output_modalities": "text",
         "supported_parameters": "structured_outputs",

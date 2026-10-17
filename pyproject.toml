@@ -28,7 +28,7 @@ pr-triage = "pr_triage.cli:app"
 where = ["src"]
 
 [tool.setuptools.package-data]
-pr_triage = ["web/*.html", "web/*.js"]
+pr_triage = ["web/*.html", "web/*.js", "web/*.css"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
